@@ -355,7 +355,7 @@ class SE(nn.Module):
 
 
 class ResNetRS(nn.Module):
-    classes: int = 1000
+    classes: int
     block_args: dict
     drop_connect_rate: float = 0.2
     dropout_rate: float = 0.25

@@ -2,6 +2,7 @@ import argparse
 from difflib import SequenceMatcher
 import logging
 import re
+import os
 
 import numpy as np
 import scipy.spatial.distance
@@ -10,6 +11,7 @@ import jax
 import jaxlib
 import jax.numpy as jnp
 from flax.core.frozen_dict import FrozenDict
+from flax import serialization
 from fuzzywuzzy import fuzz, process
 
 import models.resnetrs
@@ -30,7 +32,7 @@ def update_multidict(multidict, keys, value, fk=None):
         if len(keys) == 1:
             k = keys[0]
             if multidict[k].shape != value.shape:
-                print(f"NON MATCH {fk=} md orig: {multidict[k].shape}, value shape: {value.shape}")
+                logging.error(f"NON MATCH {fk=} md orig: {multidict[k].shape}, value shape: {value.shape}")
         multidict[keys[0]] = update_multidict(multidict[keys[0]], keys[1:], value, keys if fk is None else fk)
     else:
         return value
@@ -97,5 +99,10 @@ if __name__ == "__main__":
             jkp = jkp[key[-1]]
             logging.info(f"Matched {k} to {key[-1]}")
         final_variables = update_multidict(final_variables, key, tf_variables[k_orig])
-    model = getattr(models, args.model)(1000)
-    print(jnp.argmax(model.apply(final_variables, jnp.zeros((1, 224, 224, 3)), train=False, rngs={'dropout': jax.random.PRNGKey(0)})))
+    
+    os.makedirs('weights', exist_ok=True)
+    with open((fn := f"weights/{args.model}.variables"), 'wb') as f:
+        f.write(serialization.to_bytes(final_variables))
+    logging.info(f"Written pretrained variables to {fn}")
+#    model = getattr(models, args.model)(1000)
+#    print(jnp.argmax(model.apply(final_variables, jnp.zeros((1, 224, 224, 3)), train=False, rngs={'dropout': jax.random.PRNGKey(0)})))

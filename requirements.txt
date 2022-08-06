@@ -1,0 +1,6 @@
+tensorflow
+einops
+flax
+scipy
+numpy
+fuzzywuzzy

@@ -44,7 +44,7 @@ class DenseBlock(nn.Module):
 
 
 class DenseNet(nn.Module):
-    classes: int = 1000
+    classes: int
     blocks: list[int]
 
     @nn.compact
