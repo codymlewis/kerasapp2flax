@@ -355,7 +355,7 @@ class SE(nn.Module):
 
 
 class ResNetRS(nn.Module):
-    classes: int
+    classes: int = 1000
     block_args: dict
     drop_connect_rate: float = 0.2
     dropout_rate: float = 0.25
@@ -364,7 +364,7 @@ class ResNetRS(nn.Module):
     se_ratio: float = 0.25
 
     @nn.compact
-    def __call__(self, x, train=True, representation=False):
+    def __call__(self, x, train=True):
         x = STEM(
             bn_momentum=self.bn_momentum, bn_epsilon=self.bn_epsilon, name="STEM_1"
         )(x, train)
@@ -383,99 +383,97 @@ class ResNetRS(nn.Module):
             )(x, train) 
         x = einops.reduce(x, 'b h w d -> b d', 'mean')  # global average pooling
         x = nn.Dropout(self.dropout_rate, deterministic=train, name="top_dropout")(x)
-        if representation:
-            return x
         x = nn.Dense(self.classes, name="predictions")(x)
         x = nn.softmax(x)
         return x
 
 
 class ResNetRS50(nn.Module):
-    classes: int
+    classes: int = 1000
 
     @nn.compact
-    def __call__(self, x, train=True, representation=False):
+    def __call__(self, x, train=True):
         return ResNetRS(
             self.classes,
             BLOCK_ARGS[50],
             drop_connect_rate=0.0,
             dropout_rate=0.25,
-        )(x, train, representation)
+        )(x, train)
 
 
 class ResNetRS101(nn.Module):
-    classes: int
+    classes: int = 1000
 
     @nn.compact
-    def __call__(self, x, train=True, representation=False):
+    def __call__(self, x, train=True):
         return ResNetRS(
             self.classes,
             BLOCK_ARGS[101],
             drop_connect_rate=0.0,
             dropout_rate=0.25,
-        )(x, train, representation)
+        )(x, train)
 
 
 class ResNetRS152(nn.Module):
-    classes: int
+    classes: int = 1000
 
     @nn.compact
-    def __call__(self, x, train=True, representation=False):
+    def __call__(self, x, train=True):
         return ResNetRS(
             self.classes,
             BLOCK_ARGS[152],
             drop_connect_rate=0.0,
             dropout_rate=0.25,
-        )(x, train, representation)
+        )(x, train)
 
 
 class ResNetRS200(nn.Module):
-    classes: int
+    classes: int = 1000
 
     @nn.compact
-    def __call__(self, x, train=True, representation=False):
+    def __call__(self, x, train=True):
         return ResNetRS(
             self.classes,
             BLOCK_ARGS[200],
             drop_connect_rate=0.1,
             dropout_rate=0.25,
-        )(x, train, representation)
+        )(x, train)
 
 
 class ResNetRS270(nn.Module):
-    classes: int
+    classes: int = 1000
 
     @nn.compact
-    def __call__(self, x, train=True, representation=False):
+    def __call__(self, x, train=True):
         return ResNetRS(
             self.classes,
             BLOCK_ARGS[270],
             drop_connect_rate=0.1,
             dropout_rate=0.25,
-        )(x, train, representation)
+        )(x, train)
 
 
 class ResNetRS350(nn.Module):
-    classes: int
+    classes: int = 1000
 
     @nn.compact
-    def __call__(self, x, train=True, representation=False):
+    def __call__(self, x, train=True):
         return ResNetRS(
             self.classes,
             BLOCK_ARGS[350],
             drop_connect_rate=0.1,
             dropout_rate=0.4,
-        )(x, train, representation)
+        )(x, train)
 
 
 class ResNetRS420(nn.Module):
-    classes: int
+    classes: int = 1000
 
     @nn.compact
-    def __call__(self, x, train=True, representation=False):
+    def __call__(self, x, train=True):
         return ResNetRS(
             self.classes,
             BLOCK_ARGS[420],
             drop_connect_rate=0.1,
             dropout_rate=0.4,
-        )(x, train, representation)
+        )(x, train)
