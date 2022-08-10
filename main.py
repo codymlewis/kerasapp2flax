@@ -14,7 +14,10 @@ from flax.core.frozen_dict import FrozenDict
 from flax import serialization
 from fuzzywuzzy import fuzz, process
 
-import models.resnetrs
+import models
+
+# Ensure TF does not see GPU and grab all GPU memory.
+tf.config.set_visible_devices([], device_type='GPU')
 
 
 def copy_dict(d):
@@ -73,8 +76,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Translate the keras applications weights to flax weights.")
     parser.add_argument("--model", type=str, default="ResNetRS50", help="Model to translate the weights of.")
     args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.WARNING)
 
+    print("Downloading and translating model...")
     scorer = inception_scorer if 'inception' in args.model.lower() else fuzz.WRatio
     jax_variables = getattr(models, args.model)(1000).init(
         jax.random.PRNGKey(0), jnp.zeros((1, 224, 224, 3))
@@ -103,6 +107,4 @@ if __name__ == "__main__":
     os.makedirs('weights', exist_ok=True)
     with open((fn := f"weights/{args.model}.variables"), 'wb') as f:
         f.write(serialization.to_bytes(final_variables))
-    logging.info(f"Written pretrained variables to {fn}")
-#    model = getattr(models, args.model)(1000)
-#    print(jnp.argmax(model.apply(final_variables, jnp.zeros((1, 224, 224, 3)), train=False, rngs={'dropout': jax.random.PRNGKey(0)})))
+    print(f"Written pretrained variables to {fn}")
