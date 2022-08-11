@@ -17,3 +17,4 @@ model weights you want to translate.
 - The DenseNet variations
 - The ResNet-RS variations
 - Inception-V3
+- MobileNetV2

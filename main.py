@@ -13,6 +13,7 @@ import jax.numpy as jnp
 from flax.core.frozen_dict import FrozenDict
 from flax import serialization
 from fuzzywuzzy import fuzz, process
+import einops
 
 import models
 
@@ -76,11 +77,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Translate the keras applications weights to flax weights.")
     parser.add_argument("--model", type=str, default="ResNetRS50", help="Model to translate the weights of.")
     args = parser.parse_args()
-    logging.basicConfig(level=logging.WARNING)
+    logging.basicConfig(level=logging.INFO)
 
     print("Downloading and translating model...")
     scorer = inception_scorer if 'inception' in args.model.lower() else fuzz.WRatio
-    jax_variables = getattr(models, args.model)(1000).init(
+    jax_variables = getattr(models, args.model)().init(
         jax.random.PRNGKey(0), jnp.zeros((1, 224, 224, 3))
     )
     tf_model = getattr(tf.keras.applications, args.model)()
@@ -90,21 +91,34 @@ if __name__ == "__main__":
         k_orig = k
         k = k.replace('__', '_')
         key = []
-        if "batch_norm" in k or "bn" in k:
+        if "batch_norm" in k.lower() or "bn" in k.lower():
             if 'gamma' in k or 'beta' in k:
                 continue
             key.append('batch_stats')
         else:
             key.append('params')
         jkp = jax_variables[key[-1]]
+        if args.model == "MobileNetV2":
+            if (m := re.match(r'block_\d\d?', k)):
+                block_id = re.findall(r'\d\d?', m.group())[0]
+                key.append(f'InvertedResBlock_{block_id}')
+                jkp = jkp[key[-1]]
+            elif re.match('expanded_conv_', k):
+                key.append('InvertedResBlock_0')
+                jkp = jkp[key[-1]]
         while type(jkp) is not jaxlib.xla_extension.DeviceArray:
             matches = process.extract(k, jkp.keys(), scorer=scorer)
             key.append(best_match(k, matches))
             jkp = jkp[key[-1]]
             logging.info(f"Matched {k} to {key[-1]}")
-        final_variables = update_multidict(final_variables, key, tf_variables[k_orig])
+        if "depthwise" in k_orig and key[0] != "batch_stats":
+            tf_vars = einops.rearrange(tf_variables[k_orig], 'b h c w -> b h w c')
+        else:
+            tf_vars = tf_variables[k_orig]
+        final_variables = update_multidict(final_variables, key, tf_vars)
     
     os.makedirs('weights', exist_ok=True)
     with open((fn := f"weights/{args.model}.variables"), 'wb') as f:
         f.write(serialization.to_bytes(final_variables))
     print(f"Written pretrained variables to {fn}")
+#    print(jnp.argmax(getattr(models, args.model)().apply(final_variables, jnp.zeros((1, 224, 224, 3)), train=False), axis=-1))
