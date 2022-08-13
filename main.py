@@ -93,8 +93,11 @@ if __name__ == "__main__":
         key = []
         if "batch_norm" in k.lower() or "bn" in k.lower():
             if 'gamma' in k or 'beta' in k:
-                continue
-            key.append('batch_stats')
+                key.append('params')
+                k = k.replace('gamma', 'scale')
+                k = k.replace('beta', 'bias')
+            else:
+                key.append('batch_stats')
         else:
             key.append('params')
         jkp = jax_variables[key[-1]]
@@ -121,4 +124,11 @@ if __name__ == "__main__":
     with open((fn := f"weights/{args.model}.variables"), 'wb') as f:
         f.write(serialization.to_bytes(final_variables))
     print(f"Written pretrained variables to {fn}")
-#    print(jnp.argmax(getattr(models, args.model)().apply(final_variables, jnp.zeros((1, 224, 224, 3)), train=False), axis=-1))
+
+    print("JAX Model")
+    logits = getattr(models, args.model)().apply(final_variables, np.ones((1, 224, 224, 3)), train=False)
+    print(jnp.argmax(logits, axis=-1))
+
+    print("tf model")
+    tf_logits = tf_model(np.ones((1, 224, 224, 3))).numpy()
+    print(jnp.argmax(tf_logits, axis=-1))

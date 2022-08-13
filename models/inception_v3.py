@@ -27,7 +27,7 @@ class ConvBN(nn.Module):
             name=conv_name
         )(x)
         x = nn.BatchNorm(axis=3, name=bn_name)(
-            x, use_running_average=not train
+            x, use_running_average=not train, use_scale=False
         )
         x = nn.relu(x)
         return x
