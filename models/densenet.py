@@ -11,7 +11,7 @@ class ConvBlock(nn.Module):
     def __call__(self, x, train=True):
         x1 = nn.BatchNorm(axis=3, epsilon=1.001e-5, name=self.name + '_0_bn', use_running_average=not train)(x)
         x1 = nn.relu(x1)
-        x1 = nn.Conv(4 * self.growth_rate, (1, 1), use_bias=False, name=self.name + '_1_conv')(x1)
+        x1 = nn.Conv(4 * self.growth_rate, (1, 1), padding='VALID', use_bias=False, name=self.name + '_1_conv')(x1)
         x1 = nn.BatchNorm(axis=3, epsilon=1.001e-5, name=self.name + '_1_bn', use_running_average=not train)(x1)
         x1 = nn.relu(x1)
         x1 = nn.Conv(self.growth_rate, (3, 3), padding='SAME', use_bias=False, name=self.name + '_2_conv')(x1)
@@ -27,7 +27,7 @@ class TransitionBlock(nn.Module):
     def __call__(self, x, train=True):
         x = nn.BatchNorm(axis=3, epsilon=1.001e-5, name=self.name + '_bn', use_running_average=not train)(x)
         x = nn.relu(x)
-        x = nn.Conv(int(x.shape[3] * self.reduction), (1, 1), use_bias=False, name=self.name + '_conv')(x)
+        x = nn.Conv(int(x.shape[3] * self.reduction), (1, 1), padding='VALID', use_bias=False, name=self.name + '_conv')(x)
         x = nn.avg_pool(x, (2, 2), strides=(2, 2))
         return x
 
@@ -50,7 +50,7 @@ class DenseNet(nn.Module):
     @nn.compact
     def __call__(self, x, train=True):
         x = jnp.pad(x, ((0, 0), (3, 3), (3, 3), (0, 0)))
-        x = nn.Conv(64, (7, 7), (2, 2), use_bias=False, name="conv1/conv")(x)
+        x = nn.Conv(64, (7, 7), (2, 2), padding='VALID', use_bias=False, name="conv1/conv")(x)
         x = nn.BatchNorm(axis=3, epsilon=1.001e-5, name='conv1/bn', use_running_average=not train)(x)
         x = nn.relu(x)
         x = jnp.pad(x, ((0, 0), (1, 1), (1, 1), (0, 0)))

@@ -125,7 +125,7 @@ class MobileNetV2(nn.Module):
         else:
             last_block_filters = 1280
 
-        x = nn.Conv(last_block_filters, (1, 1), use_bias=False, name="Conv_1")(x)
+        x = nn.Conv(last_block_filters, (1, 1), padding='VALID', use_bias=False, name="Conv_1")(x)
         x = nn.BatchNorm(
             use_running_average=not train, axis=-1, epsilon=1e-3, momentum=0.999, name="Conv_1_bn"
         )(x)

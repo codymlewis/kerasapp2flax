@@ -125,10 +125,11 @@ if __name__ == "__main__":
         f.write(serialization.to_bytes(final_variables))
     print(f"Written pretrained variables to {fn}")
 
-    print("JAX Model")
-    logits = getattr(models, args.model)().apply(final_variables, np.ones((1, 224, 224, 3)), train=False)
-    print(jnp.argmax(logits, axis=-1))
-
-    print("tf model")
-    tf_logits = tf_model(np.ones((1, 224, 224, 3))).numpy()
-    print(jnp.argmax(tf_logits, axis=-1))
+    # Model testing
+#    print("JAX Model")
+#    logits = getattr(models, args.model)().apply(final_variables, np.ones((1, 224, 224, 3)), train=False)
+#    print(jnp.argmax(logits, axis=-1))
+#
+#    print("tf model")
+#    tf_logits = tf_model(np.ones((1, 224, 224, 3))).numpy()
+#    print(jnp.argmax(tf_logits, axis=-1))
