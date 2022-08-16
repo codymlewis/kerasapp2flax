@@ -125,13 +125,13 @@ if __name__ == "__main__":
         f.write(serialization.to_bytes(final_variables))
     print(f"Written pretrained variables to {fn}")
 
-    # Model testing
-#    x = np.random.uniform(size=(100, 224, 224, 3))
-#    print("JAX Model")
-#    logits = getattr(models, args.model)().apply(final_variables, x, train=False)
-#    print(jnp.argmax(logits, axis=-1))
-#
-#    print("tf model")
-#    tf_logits = tf_model(x).numpy()
-#    print(jnp.argmax(tf_logits, axis=-1))
-#    print(f"Match: {(jnp.argmax(logits, axis=-1) == jnp.argmax(tf_logits, axis=-1)).all()}")
+   # Model testing
+    x = np.random.uniform(size=(100, 224, 224, 3))
+    print("JAX Model")
+    logits = getattr(models, args.model)().apply(final_variables, x, train=False)
+    print(jnp.argmax(logits, axis=-1))
+
+    print("tf model")
+    tf_logits = tf_model(x).numpy()
+    print(jnp.argmax(tf_logits, axis=-1))
+    print(f"Match: {(jnp.argmax(logits, axis=-1) == jnp.argmax(tf_logits, axis=-1)).all()}")

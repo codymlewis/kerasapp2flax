@@ -4,3 +4,6 @@ from .resnetrs import (
 )
 from .inception_v3 import InceptionV3
 from .mobilenet_v2 import MobileNetV2
+from .resnet import (
+    ResNet50, ResNet101, ResNet152
+)

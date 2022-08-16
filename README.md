@@ -15,6 +15,7 @@ model weights you want to translate.
 ## Implemented Models
 
 - The DenseNet variations
+- The ResNet variations
 - The ResNet-RS variations
 - Inception-V3
 - MobileNetV2
