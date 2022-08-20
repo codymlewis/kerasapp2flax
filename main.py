@@ -36,7 +36,7 @@ def update_multidict(multidict, keys, value, fk=None):
         if len(keys) == 1:
             k = keys[0]
             if multidict[k].shape != value.shape:
-                logging.error(f"NON MATCH {fk=} md orig: {multidict[k].shape}, value shape: {value.shape}")
+                logging.warning(f"NON MATCH {fk=} md orig: {multidict[k].shape}, value shape: {value.shape}")
         multidict[keys[0]] = update_multidict(multidict[keys[0]], keys[1:], value, keys if fk is None else fk)
     else:
         return value
@@ -74,10 +74,10 @@ def inception_scorer(key: str, query: str) -> int:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description="Translate the keras applications weights to flax weights.")
     parser.add_argument("--model", type=str, default="ResNetRS50", help="Model to translate the weights of.")
     args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO)
 
     print("Downloading and translating model...")
     scorer = inception_scorer if 'inception' in args.model.lower() else fuzz.WRatio
@@ -90,6 +90,7 @@ if __name__ == "__main__":
     for k in tf_variables.keys():
         k_orig = k
         k = k.replace('__', '_')
+        k = k.replace(':0', '')
         key = []
         if "batch_norm" in k.lower() or "bn" in k.lower():
             if 'gamma' in k or 'beta' in k:

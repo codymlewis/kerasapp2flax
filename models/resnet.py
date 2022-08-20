@@ -27,7 +27,7 @@ class ResNet(nn.Module):
         x = self.stack_fn(x, train)
 
         if self.preact:
-            x = nn.BatchNorm(use_running_average=not train, axis=3, epsilon=1.001e-5, name="conv1_bn")(x)
+            x = nn.BatchNorm(use_running_average=not train, axis=3, epsilon=1.001e-5, name="post_bn")(x)
             x = nn.relu(x)
 
         x = einops.reduce(x, "b h w d -> b d", 'mean')
@@ -114,10 +114,10 @@ class Block2(nn.Module):
                 4 * self.filters, (1, 1), strides=self.strides, padding="VALID", name=self.name + "_0_conv"
             )(preact)
         else:
-            shortcut = nn.max_pool(x, (1, 1), strides=self.strides)(x) if self.strides > (1, 1) else x
+            shortcut = nn.max_pool(x, (1, 1), strides=self.strides) if self.strides > (1, 1) else x
 
         x = nn.Conv(
-            self.filters, (1, 1), strides=self.strides, padding="VALID", use_bias=False,
+            self.filters, (1, 1), strides=(1, 1), padding="VALID", use_bias=False,
             name=self.name + "_1_conv"
         )(preact)
         x = nn.BatchNorm(use_running_average=not train, axis=3, epsilon=1.001e-5, name=self.name + "_1_bn")(x)
@@ -146,7 +146,7 @@ class Stack2(nn.Module):
     def __call__(self, x, train=True):
         x = Block2(self.filters, conv_shortcut=True, name=self.name + "_block1")(x, train)
         for i in range(2, self.blocks):
-            x = Block1(self.filters, name=f"{self.name}_block{i}")(x, train)
+            x = Block2(self.filters, name=f"{self.name}_block{i}")(x, train)
         x = Block2(self.filters, strides=self.strides1, name=f"{self.name}_block{self.blocks}")(x, train)
         return x
 

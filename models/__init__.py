@@ -7,3 +7,6 @@ from .mobilenet_v2 import MobileNetV2
 from .resnet import (
     ResNet50, ResNet101, ResNet152
 )
+from .resnet_v2 import (
+    ResNet50V2, ResNet101V2, ResNet152V2
+)
