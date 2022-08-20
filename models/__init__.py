@@ -10,3 +10,8 @@ from .resnet import (
 from .resnet_v2 import (
     ResNet50V2, ResNet101V2, ResNet152V2
 )
+
+from .efficientnet import (
+    EfficientNetB0, EfficientNetB1, EfficientNetB2, EfficientNetB3,
+    EfficientNetB4, EfficientNetB5, EfficientNetB6, EfficientNetB7
+)

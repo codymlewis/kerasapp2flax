@@ -20,3 +20,4 @@ model weights you want to translate.
 - The ResNet-RS variations
 - Inception-V3
 - MobileNetV2
+- The EfficientNet variations

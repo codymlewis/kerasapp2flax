@@ -4,6 +4,8 @@ import logging
 import re
 import os
 
+logging.basicConfig(level=logging.WARNING) 
+
 import numpy as np
 import scipy.spatial.distance
 import tensorflow as tf
@@ -74,7 +76,6 @@ def inception_scorer(key: str, query: str) -> int:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description="Translate the keras applications weights to flax weights.")
     parser.add_argument("--model", type=str, default="ResNetRS50", help="Model to translate the weights of.")
     args = parser.parse_args()
@@ -92,6 +93,8 @@ if __name__ == "__main__":
         k = k.replace('__', '_')
         k = k.replace(':0', '')
         key = []
+        if re.match('^normalization', k.lower()):  # Skip plain normalization layers
+            continue
         if "batch_norm" in k.lower() or "bn" in k.lower():
             if 'gamma' in k or 'beta' in k:
                 key.append('params')
@@ -115,6 +118,8 @@ if __name__ == "__main__":
             key.append(best_match(k, matches))
             jkp = jkp[key[-1]]
             logging.info(f"Matched {k} to {key[-1]}")
+        if key[-2] not in k:
+            logging.warning(f"Non-matching names between {k} and {key[-2]}")
         if "depthwise" in k_orig and key[0] != "batch_stats":
             tf_vars = einops.rearrange(tf_variables[k_orig], 'b h c w -> b h w c')
         else:
@@ -127,12 +132,12 @@ if __name__ == "__main__":
     print(f"Written pretrained variables to {fn}")
 
    # Model testing
-    x = np.random.uniform(size=(100, 224, 224, 3))
-    print("JAX Model")
-    logits = getattr(models, args.model)().apply(final_variables, x, train=False)
-    print(jnp.argmax(logits, axis=-1))
-
-    print("tf model")
-    tf_logits = tf_model(x).numpy()
-    print(jnp.argmax(tf_logits, axis=-1))
-    print(f"Match: {(jnp.argmax(logits, axis=-1) == jnp.argmax(tf_logits, axis=-1)).all()}")
+#    x = np.random.uniform(high=255.0, size=(100, 224, 224, 3))
+#    print("JAX Model")
+#    logits = getattr(models, args.model)().apply(final_variables, x, train=False)
+#    print(jnp.argmax(logits, axis=-1))
+#
+#    print("tf model")
+#    tf_logits = tf_model(x).numpy()
+#    print(jnp.argmax(tf_logits, axis=-1))
+#    print(f"Match: {(jnp.argmax(logits, axis=-1) == jnp.argmax(tf_logits, axis=-1)).all()}")
