@@ -4,13 +4,11 @@ import logging
 import re
 import os
 
-logging.basicConfig(level=logging.WARNING) 
 
 import numpy as np
 import scipy.spatial.distance
 import tensorflow as tf
 import jax
-import jaxlib
 import jax.numpy as jnp
 from flax.core.frozen_dict import FrozenDict
 from flax import serialization
@@ -18,6 +16,9 @@ from fuzzywuzzy import fuzz, process
 import einops
 
 import models
+
+
+logging.basicConfig(level=logging.WARNING)
 
 # Ensure TF does not see GPU and grab all GPU memory.
 tf.config.set_visible_devices([], device_type='GPU')
@@ -113,7 +114,7 @@ if __name__ == "__main__":
             elif re.match('expanded_conv_', k):
                 key.append('InvertedResBlock_0')
                 jkp = jkp[key[-1]]
-        while type(jkp) is not jaxlib.xla_extension.DeviceArray:
+        while not isinstance(jkp, jax.Array):
             matches = process.extract(k, jkp.keys(), scorer=scorer)
             key.append(best_match(k, matches))
             jkp = jkp[key[-1]]
@@ -125,13 +126,13 @@ if __name__ == "__main__":
         else:
             tf_vars = tf_variables[k_orig]
         final_variables = update_multidict(final_variables, key, tf_vars)
-    
+
     os.makedirs('weights', exist_ok=True)
     with open((fn := f"weights/{args.model}.variables"), 'wb') as f:
         f.write(serialization.to_bytes(final_variables))
     print(f"Written pretrained variables to {fn}")
 
-   # Model testing
+# Model testing
 #    x = np.random.uniform(high=255.0, size=(100, 224, 224, 3))
 #    print("JAX Model")
 #    logits = getattr(models, args.model)().apply(final_variables, x, train=False)
