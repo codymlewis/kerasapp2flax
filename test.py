@@ -41,7 +41,7 @@ class TestModels(unittest.TestCase):
         ("DenseNet169"),
         ("DenseNet201"),
         # ("InceptionV3"),
-        # ("MobileNetV2"),
+        ("MobileNetV2"),
         # ("ResNetRS50"),
         # ("ResNetRS101"),
         # ("ResNetRS152"),
@@ -51,7 +51,6 @@ class TestModels(unittest.TestCase):
     ])
     def test_Model(self, model_name):
         chex.assert_trees_all_close(*model_outputs(model_name))
-
 
 
 if __name__ == "__main__":

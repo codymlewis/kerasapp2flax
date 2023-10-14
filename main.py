@@ -40,7 +40,7 @@ def update_multidict(multidict, keys, value, fk=None):
         if len(keys) == 1:
             k = keys[0]
             if multidict[k].shape != value.shape:
-                logging.warning(f"NON MATCH {fk=} md orig: {multidict[k].shape}, value shape: {value.shape}")
+                logging.warning(f"NON MATCH {fk=}, md orig: {multidict[k].shape}, value shape: {value.shape}")
         multidict[keys[0]] = update_multidict(multidict[keys[0]], keys[1:], value, keys if fk is None else fk)
     else:
         return value
@@ -60,36 +60,18 @@ def best_match(key, choices):
     return winner
 
 
-def inception_scorer(key: str, query: str) -> int:
-    key_orig, query_orig = key, query
-    key.replace('batch_normalization', 'BN')
-    key = key.replace('_', '').replace('/', '').replace(':0', '').lower()
-    query = query.replace('_', '').replace('/', '').replace(':0', '').lower()
-    k = np.array([int(b) for b in bytes(key, 'utf-8')])
-    k = np.pad(k, (0, 150 - len(k)))
-    q = np.array([int(b) for b in bytes(query, 'utf-8')])
-    q = np.pad(q, (0, 150 - len(q)))
-    score = int(100 * (1 - scipy.spatial.distance.hamming(k, q)))
-    score += SequenceMatcher(None, key, query).find_longest_match().size
-    if re.match(r'.*_\d.*', key_orig) and re.match(r'.*_\d.*', query_orig):
-        if int(re.findall('_\d\d?', key_orig)[0][1:]) == int(re.findall('_\d\d?', query_orig)[0][1:]):
-            score += 100
-    return score
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Translate the keras applications weights to flax weights.")
     parser.add_argument("--model", type=str, default="ResNetRS50", help="Model to translate the weights of.")
     args = parser.parse_args()
 
     print(f"Downloading and translating {args.model} model...")
-    scorer = inception_scorer if 'inception' in args.model.lower() else fuzz.WRatio
     flax_model = getattr(models, args.model)()
     jax_variables = flax_model.init(
         jax.random.PRNGKey(0), jnp.zeros((1, 224, 224, 3))
     )
     tf_model = getattr(tf.keras.applications, args.model)()
-    tf_variables = {w.name: jnp.array(w.value().numpy()) for w in tf_model.weights}
+    tf_variables = {w.name: jnp.array(w.value().numpy(), dtype=jnp.float32) for w in tf_model.weights}
     final_variables = copy_dict(jax_variables)
     for k in tf_variables.keys():
         k_orig = k
@@ -117,13 +99,13 @@ if __name__ == "__main__":
                 key.append('InvertedResBlock_0')
                 jkp = jkp[key[-1]]
         while not isinstance(jkp, jax.Array):
-            matches = process.extract(k, jkp.keys(), scorer=scorer)
+            matches = process.extract(k, jkp.keys())
             key.append(best_match(k, matches))
             jkp = jkp[key[-1]]
             logging.info(f"Matched {k} to {key[-1]}")
         if key[-2].replace('_', '') not in k.replace('_', ''):
-            logging.warning(f"Non-matching names between {k} and {key[-2:]}")
-        if "depthwise" in k_orig and key[0] != "batch_stats":
+            logging.warning(f"Non-matching names between {k} and {key}")
+        if "depthwise" in k_orig and "BN" not in k_orig:
             tf_vars = einops.rearrange(tf_variables[k_orig], 'b h c w -> b h w c')
         else:
             tf_vars = tf_variables[k_orig]
@@ -136,7 +118,7 @@ if __name__ == "__main__":
         params=final_variables,
         tx=optax.set_to_zero(),
     )
-    fn = ocp.PyTreeCheckpointer().save(
+    ocp.PyTreeCheckpointer().save(
         f"weights/{args.model}",
         train_state,
         save_args=orbax_utils.save_args_from_target(train_state)
