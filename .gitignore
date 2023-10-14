@@ -3,3 +3,4 @@ __pycache__/
 Session.vim
 tags
 weights/
+.venv

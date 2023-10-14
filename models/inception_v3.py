@@ -26,8 +26,8 @@ class ConvBN(nn.Module):
             use_bias=False,
             name=conv_name
         )(x)
-        x = nn.BatchNorm(axis=3, name=bn_name)(
-            x, use_running_average=not train, use_scale=False
+        x = nn.BatchNorm(axis=3, name=bn_name, use_scale=False)(
+            x, use_running_average=not train
         )
         x = nn.relu(x)
         return x

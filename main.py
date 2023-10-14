@@ -4,15 +4,16 @@ import logging
 import re
 import os
 
-
 import numpy as np
 import scipy.spatial.distance
 import tensorflow as tf
 import jax
 import jax.numpy as jnp
-from flax.core.frozen_dict import FrozenDict
-from flax import serialization
-from fuzzywuzzy import fuzz, process
+from flax.training import orbax_utils
+from flax.training.train_state import TrainState
+import orbax.checkpoint as ocp
+import optax
+from thefuzz import fuzz, process
 import einops
 
 import models
@@ -27,7 +28,7 @@ tf.config.set_visible_devices([], device_type='GPU')
 def copy_dict(d):
     copy = {}
     for key, value in d.items():
-        if type(value) is FrozenDict:
+        if isinstance(value, dict):
             copy[key] = copy_dict(value)
         else:
             copy[key] = value
@@ -81,9 +82,10 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, default="ResNetRS50", help="Model to translate the weights of.")
     args = parser.parse_args()
 
-    print("Downloading and translating model...")
+    print(f"Downloading and translating {args.model} model...")
     scorer = inception_scorer if 'inception' in args.model.lower() else fuzz.WRatio
-    jax_variables = getattr(models, args.model)().init(
+    flax_model = getattr(models, args.model)()
+    jax_variables = flax_model.init(
         jax.random.PRNGKey(0), jnp.zeros((1, 224, 224, 3))
     )
     tf_model = getattr(tf.keras.applications, args.model)()
@@ -119,26 +121,24 @@ if __name__ == "__main__":
             key.append(best_match(k, matches))
             jkp = jkp[key[-1]]
             logging.info(f"Matched {k} to {key[-1]}")
-        if key[-2] not in k:
-            logging.warning(f"Non-matching names between {k} and {key[-2]}")
+        if key[-2].replace('_', '') not in k.replace('_', ''):
+            logging.warning(f"Non-matching names between {k} and {key[-2:]}")
         if "depthwise" in k_orig and key[0] != "batch_stats":
             tf_vars = einops.rearrange(tf_variables[k_orig], 'b h c w -> b h w c')
         else:
             tf_vars = tf_variables[k_orig]
+        logging.info(f"Setting {k_orig=} into {key=}")
         final_variables = update_multidict(final_variables, key, tf_vars)
 
-    os.makedirs('weights', exist_ok=True)
-    with open((fn := f"weights/{args.model}.variables"), 'wb') as f:
-        f.write(serialization.to_bytes(final_variables))
-    print(f"Written pretrained variables to {fn}")
-
-# Model testing
-#    x = np.random.uniform(high=255.0, size=(100, 224, 224, 3))
-#    print("JAX Model")
-#    logits = getattr(models, args.model)().apply(final_variables, x, train=False)
-#    print(jnp.argmax(logits, axis=-1))
-#
-#    print("tf model")
-#    tf_logits = tf_model(x).numpy()
-#    print(jnp.argmax(tf_logits, axis=-1))
-#    print(f"Match: {(jnp.argmax(logits, axis=-1) == jnp.argmax(tf_logits, axis=-1)).all()}")
+    # Now we save the model in a useful format
+    train_state = TrainState.create(
+        apply_fn=flax_model.apply,
+        params=final_variables,
+        tx=optax.set_to_zero(),
+    )
+    fn = ocp.PyTreeCheckpointer().save(
+        f"weights/{args.model}",
+        train_state,
+        save_args=orbax_utils.save_args_from_target(train_state)
+    )
+    print(f"Saved weights to weights/{args.model}")
