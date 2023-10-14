@@ -1,7 +1,6 @@
 tensorflow==2.14.0
 einops==0.7.0
 flax==0.7.4
-scipy==1.11.3
 numpy==1.26.0
 thefuzz==0.20.0
 python-Levenshtein==0.23.0
